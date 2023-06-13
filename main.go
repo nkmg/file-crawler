@@ -7,9 +7,8 @@ import (
 )
 
 func main() {
-	app := app.Generate()
-	if erro := app.Run(os.Args); erro != nil {
-		log.Fatal(erro)
+	generate := app.Generate()
+	if err := generate.Run(os.Args); err != nil {
+		log.Fatal(err)
 	}
-
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-// Return the command line application to be executed
+// Generate - Return the command line application to be executed
 func Generate() *cli.App {
 
 	app := cli.NewApp()
@@ -33,20 +33,21 @@ func Generate() *cli.App {
 					Value: "",
 				},
 			},
-			Action: setup_to_search,
+			Action: setupToSearch,
 		},
 	}
 
 	return app
 }
 
-func setup_to_search(c *cli.Context) {
-	path_to_search := c.String("path")
+func setupToSearch(c *cli.Context) {
+	pathToSearch := c.String("path")
 	content := c.String("contain")
 
-	if len(path_to_search) > 0 {
+	if len(pathToSearch) > 0 {
 		if len(content) > 0 {
-			searching(path_to_search, content)
+			printFiles := searching(pathToSearch, content)
+			fmt.Println(printFiles)
 		} else {
 			log.Fatal("Try again! Specify the parameter contain!")
 		}
@@ -55,10 +56,7 @@ func setup_to_search(c *cli.Context) {
 	}
 }
 
-func searching(path, content string) {
-	channel_files := make(chan os.DirEntry)
-	channel_results := make(chan string)
-
+func searching(path, content string) []string {
 	dir, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -75,33 +73,37 @@ func searching(path, content string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	
+	channelFiles := make(chan os.DirEntry, len(files))
+	channelResults := make(chan string, len(files))
 
 	for i := 0; i < runtime.NumCPU(); i++ {
-		go searching_routine(path, content, reg, channel_files, channel_results)
+		go searchingRoutine(path, content, reg, channelFiles, channelResults)
 	}
 
 	for _, file := range files {
-		channel_files <- file
+		channelFiles <- file
 	}
+	close(channelFiles)
 
-	close(channel_files)
-
-	for found := range channel_results {
-		fmt.Println(found)
-	}
-
-}
-
-func searching_routine(path, content string, reg *regexp.Regexp, channel_files <-chan os.DirEntry, channel_results chan<- string) {
-	for file := range channel_files {
-		if file_found := checking_files(file, path, content, reg); len(file_found) > 0 {
-			channel_results <- file_found
+	var foundFiles []string
+	for i := 0; i < len(files); i++ {
+		found := <-channelResults
+		if len(found) > 0 {
+			foundFiles = append(foundFiles, found)
 		}
 	}
 
+	return foundFiles
 }
 
-func checking_files(file os.DirEntry, path, content string, reg *regexp.Regexp) string {
+func searchingRoutine(path, content string, reg *regexp.Regexp, channelFiles <-chan os.DirEntry, channelResults chan<- string) {
+	for file := range channelFiles {
+		channelResults <- checkingFiles(file, path, content, reg)
+	}
+}
+
+func checkingFiles(file os.DirEntry, path, content string, reg *regexp.Regexp) string {
 	if reg.MatchString(file.Name()) {
 		return file.Name()
 	} else {
@@ -110,8 +112,8 @@ func checking_files(file os.DirEntry, path, content string, reg *regexp.Regexp) 
 			if err != nil {
 				log.Fatal(err)
 			}
-			found_content := strings.Split(string(data), " ")
-			for _, checking := range found_content {
+			foundContent := strings.Split(string(data), " ")
+			for _, checking := range foundContent {
 				if checking == content {
 					return file.Name()
 				}
