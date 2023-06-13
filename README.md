@@ -10,3 +10,9 @@ $ ./file-crawler.exe search --path [PATH-TO-SEARCH] --contain [WORD-TO-SEARCH]
 
     * PATH-TO-SEARCH : pass the complete path 
     * WORD-TO-SEARCH : pass the word desired
+
+### Runing Tests
+
+To run the tests, just do:
+
+$ go test ./... -v
