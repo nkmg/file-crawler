@@ -47,9 +47,11 @@ func setup_to_search(c *cli.Context) {
 	if len(path_to_search) > 0 {
 		if len(content) > 0 {
 			searching(path_to_search, content)
+		} else {
+			log.Fatal("Try again! Specify the parameter contain!")
 		}
 	} else {
-		log.Fatal("Try again specifying the path to search")
+		log.Fatal("Try again! Specify the parameter path!")
 	}
 }
 
